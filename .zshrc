@@ -2,16 +2,16 @@
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
-export ZSH="${HOME}/.oh-my-zsh"
+export ZSH=$HOME/.oh-my-zsh
 
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-ZSH_THEME="cobalt2"
+ZSH_THEME="codespaces"
 
 # Set list of themes to pick from when loading at random
-# Setting this variable when ZSH_THEME=random will cause zsh to load
+# Setting this variable when ZSH_THEME="codespaces"
 # a theme from this variable instead of looking in $ZSH/themes/
 # If set to an empty array, this variable will have no effect.
 # ZSH_THEME_RANDOM_CANDIDATES=( "robbyrussell" "agnoster" )
@@ -23,14 +23,13 @@ ZSH_THEME="cobalt2"
 # Case-sensitive completion must be off. _ and - will be interchangeable.
 # HYPHEN_INSENSITIVE="true"
 
-# Uncomment the following line to disable bi-weekly auto-update checks.
-# DISABLE_AUTO_UPDATE="true"
-
-# Uncomment the following line to automatically update without prompting.
-# DISABLE_UPDATE_PROMPT="true"
+# Uncomment one of the following lines to change the auto-update behavior
+# zstyle ':omz:update' mode disabled  # disable automatic updates
+# zstyle ':omz:update' mode auto      # update automatically without asking
+# zstyle ':omz:update' mode reminder  # just remind me to update when it's time
 
 # Uncomment the following line to change how often to auto-update (in days).
-# export UPDATE_ZSH_DAYS=13
+# zstyle ':omz:update' frequency 13
 
 # Uncomment the following line if pasting URLs and other text is messed up.
 # DISABLE_MAGIC_FUNCTIONS="true"
@@ -71,7 +70,7 @@ ZSH_THEME="cobalt2"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=()
+plugins=(git)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -99,22 +98,74 @@ source $ZSH/oh-my-zsh.sh
 #
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
-alias ohmyzsh="open ~/.oh-my-zsh"
-
-alias hotkey="st ~/.zshrc"
+# alias ohmyzsh="mate ~/.oh-my-zsh"
+alias hotkey="code ~/.zshrc"
 alias reload="source ~/.zshrc"
+
 alias lg="lazygit"
 
-function rebase(){
-	git rebase -i HEAD~"$1"
+# Moving around
+alias ..='cd ..'
+alias ...='cd ../../'
+alias ....='cd ../../../'
+alias .....='cd ../../../../'
+alias .2='cd ../../'
+alias .3='cd ../../../'
+alias .4='cd ../../../../'
+alias .5='cd ../../../../..'
+
+# codespace bazel
+alias bazelmagic="bazel run //:gazelle"
+
+function dbup(){
+  cd /workspaces/monorepo/python/"$1"
+  bazel run //python/"$1":docker_compose -- up "$1"-db
 }
 
-function getm(){
-	git pull origin master
-	git fetch
+function dbupgrade(){
+  bazel run :flask -- db upgrade -d /workspaces/monorepo/python/"$1"/migrations
+}
+
+function dbdowngrade(){
+  bazel run :flask -- db downgrade -d /workspaces/monorepo/python/"$1"/migrations
+}
+
+function dbhistory(){
+  bazel run :flask -- db history -d /workspaces/monorepo/python/"$1"/migrations
+}
+
+function dbmigrate(){
+  bazel run :flask -- db migrate -m "$2" -d /workspaces/monorepo/python/"$1"/migrations
+}
+
+function dbrevision(){
+  bazel run :flask -- db revision -m "$2" -d /workspaces/monorepo/python/"$1"/migrations
 }
 
 
-# All projects will be on...
-# mkdir ~/workspace
-export PROJECT_HOME=~/workspace
+function rundb(){
+  PGPASSWORD=postgres psql -U postgres -d "$1" -h localhost -p "$2"
+}
+
+
+# Misc
+function installBrew(){
+    # Abort on error
+    set -e
+
+    echo "Checking if Homebrew is already installed...";
+
+    # Checks if Homebrew is installed
+    # Credit: https://gist.github.com/codeinthehole/26b37efa67041e1307db
+    if test ! $(which brew); then
+      echo "Installing Homebrew...";
+      yes | /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+    else
+      echo "Homebrew is already installed...";
+    fi
+}
+
+
+DISABLE_AUTO_UPDATE=true
+DISABLE_UPDATE_PROMPT=true
+
