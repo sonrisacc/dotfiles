@@ -118,7 +118,29 @@ alias .4='cd ../../../../'
 alias .5='cd ../../../../..'
 
 # codespace bazel
-alias bazelmagic="bazel run //:gazelle"
+alias bm="bazel run //:gazelle"
+alias bmgo="bazel run //:gazelle-go"
+alias cg="make codegen"
+
+function dumpdev(){
+  pg_dump postgres://deadpool:eeXHTUSDWh4QjDFbxNk9Mxpm@localhost:5432/deadpool_db | psql postgres://postgres:postgres@localhost:6001/deadpool_db
+}
+
+function fixtest(){
+  sudo sh -c "echo 172.17.0.1    host.docker.internal >> /etc/hosts"
+}
+
+function contexttoprod(){
+  aws eks update-kubeconfig --name Xandar-prod --region=us-west-2
+}
+
+function contexttodev(){
+  aws eks update-kubeconfig --name development-eks-strong-gopher --region=us-west-2
+}
+
+function swaggerdump(){
+  bazel run //python/"$1":flask -- swagger dump
+}
 
 function dbup(){
   cd /workspaces/monorepo/python/"$1"
@@ -126,29 +148,92 @@ function dbup(){
 }
 
 function dbupgrade(){
+  cd /workspaces/monorepo/python/"$1"
   bazel run :flask -- db upgrade -d /workspaces/monorepo/python/"$1"/migrations
 }
 
 function dbdowngrade(){
+  cd /workspaces/monorepo/python/"$1"
   bazel run :flask -- db downgrade -d /workspaces/monorepo/python/"$1"/migrations
 }
 
 function dbhistory(){
+  cd /workspaces/monorepo/python/"$1"
   bazel run :flask -- db history -d /workspaces/monorepo/python/"$1"/migrations
 }
 
 function dbmigrate(){
+  cd /workspaces/monorepo/python/"$1"
   bazel run :flask -- db migrate -m "$2" -d /workspaces/monorepo/python/"$1"/migrations
 }
 
 function dbrevision(){
+  cd /workspaces/monorepo/python/"$1"
   bazel run :flask -- db revision -m "$2" -d /workspaces/monorepo/python/"$1"/migrations
 }
 
+function run(){
+  cd /workspaces/monorepo/python/"$1"
+  export TEST_WORKSPACE=true
+  bazel run //python/"$1":flask -- run
+}
+
+function runpms(){
+  cd /workspaces/monorepo/python/pms
+  export TEST_WORKSPACE=true
+  bazel run //python/pms:flask -- run -p 5001
+}
 
 function rundb(){
   PGPASSWORD=postgres psql -U postgres -d "$1" -h localhost -p "$2"
+  # drop schema public cascade;
+  # create schema public;
+  # exit db
+  # \q
+  # then exit psql and run migration
+  # bazel run :flask -- db upgrade
 }
+
+function test(){
+  bazel test --cache_test_results=no "$1"
+}
+
+function pods(){
+  kubectl get pods -n rest-services
+}
+
+function podenv(){
+  kubectl exec "$1" -n rest-services -- printenv
+}
+
+function portf(){
+  kubectl port-forward -n rest-services pod/rds-postgresql-proxy 5432:5432 --address 0.0.0.0
+}
+
+function portfprod(){
+  kubectl port-forward -n rest-services pod/rds-postgresql-proxy 5432:5433 --address 0.0.0.0
+}
+
+function localpend(){
+  bazel run :flask -- cron auto-pend-approved-patients
+}
+
+function getEnv(){
+  kubectl exec -n rest-services svc/"$1" -- printenv
+}
+
+function sp(){
+  bazel run :flask -- cron skeleton-patient-profiles
+}
+
+function auth(){
+  awsudo
+}
+
+function role(){
+  export AWS_PROFILE="$1"
+}
+
 
 
 # Misc
@@ -174,3 +259,15 @@ eval `dircolors ~/.dircolors`
 DISABLE_AUTO_UPDATE=true
 DISABLE_UPDATE_PROMPT=true
 
+# go
+GOVERSION="1.19.1"
+GOARCHIVE="go${GOVERSION}.linux-amd64.tar.gz"
+curl -OL https://golang.org/dl/${GOARCHIVE}
+sudo rm -rf /usr/local/go
+sudo tar -C /usr/local -xzf ${GOARCHIVE}
+rm ${GOARCHIVE}
+
+export PATH=$HOME/bin:$HOME.local/bin:$HOME/go/bin:$PATH:/usr/local/go/bin
+
+# brew
+eval "$(/opt/homebrew/bin/brew shellenv)"
